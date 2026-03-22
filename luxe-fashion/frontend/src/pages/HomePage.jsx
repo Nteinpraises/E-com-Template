@@ -9,12 +9,41 @@ const API = import.meta.env.VITE_API_URL;
 function ProductCard({ product }) {
   const navigate = useNavigate();
   const { addToCart } = useApp();
+
   return (
     <div className="product-card" onClick={() => navigate(`/product/${product._id}`)}>
-      <div className="product-img">
-        <span style={{ fontSize:72 }}>{product.emoji}</span>
-        {product.badge && <span className="product-badge">{product.badge}</span>}
+
+      {/* IMAGE AREA */}
+      <div style={{
+        width: '100%',
+        aspectRatio: '3/4',
+        background: 'linear-gradient(135deg, var(--cream2), var(--cream3))',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {product.mainImage ? (
+          <img
+            src={product.mainImage}
+            alt={product.name}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+        ) : (
+          <span style={{ fontSize: 72 }}>{product.emoji}</span>
+        )}
+        {product.badge && (
+          <span className="product-badge">{product.badge}</span>
+        )}
       </div>
+
+      {/* INFO */}
       <div className="product-info">
         <div className="product-cat">{product.category}</div>
         <div className="product-name">{product.name}</div>
@@ -27,6 +56,8 @@ function ProductCard({ product }) {
           <span>({product.numReviews})</span>
         </div>
       </div>
+
+      {/* ACTIONS */}
       <div className="product-actions" onClick={e => e.stopPropagation()}>
         <button className="btn btn-primary btn-sm" style={{ flex:1 }}
                 onClick={() => navigate(`/product/${product._id}`)}>View</button>

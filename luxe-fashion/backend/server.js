@@ -15,10 +15,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── ROUTES ──────────────────────────────────
+// ── ROUTES ──────────────────────────────────
 app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders',   require('./routes/orders'));
 app.use('/api/payments', require('./routes/payments'));
+app.use('/api/upload',   require('./routes/upload'));
 
 // ── HEALTH CHECK ────────────────────────────
 app.get('/', (req, res) => {

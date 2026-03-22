@@ -9,14 +9,46 @@ const API = import.meta.env.VITE_API_URL;
 // ── ADD PRODUCT MODAL ─────────────────────────
 function AddProductModal({ open, onClose, onAdd }) {
   const cats = ['Suits','Shirts','T-Shirts','Trousers','Jeans','Loafers'];
-  const [loading, setLoading] = useState(false);
-  const [err,     setErr]     = useState('');
-  const [form,    setForm]    = useState({
+  const [loading,       setLoading]       = useState(false);
+  const [uploading,     setUploading]     = useState(false);
+  const [err,           setErr]           = useState('');
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [preview,       setPreview]       = useState(null);
+  const [form, setForm] = useState({
     name:'', category:'Suits', price:'', oldPrice:'',
     sizes:'S,M,L,XL', colors:'#1A1714', stock:'10',
     desc:'', badge:'', emoji:'👔',
   });
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const { data } = await axios.post(
+        `${API}/upload`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      setUploadedImage(data);
+    } catch (e) {
+      setErr('Image upload failed. Check your Cloudinary keys in .env');
+      setPreview(null);
+    } finally { setUploading(false); }
+  };
+
+  const removeImage = async () => {
+    if (uploadedImage?.public_id) {
+      try { await axios.delete(`${API}/upload/${uploadedImage.public_id}`); }
+      catch (e) { /* ignore */ }
+    }
+    setUploadedImage(null);
+    setPreview(null);
+  };
 
   const submit = async () => {
     if (!form.name || !form.price || !form.desc) {
@@ -26,15 +58,17 @@ function AddProductModal({ open, onClose, onAdd }) {
     try {
       await onAdd({
         ...form,
-        price:    Number(form.price),
-        oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
-        sizes:    form.sizes.split(',').map(s => s.trim()),
-        colors:   form.colors.split(',').map(c => c.trim()),
-        stock:    Number(form.stock),
-        badge:    form.badge || null,
+        price:     Number(form.price),
+        oldPrice:  form.oldPrice ? Number(form.oldPrice) : null,
+        sizes:     form.sizes.split(',').map(s => s.trim()),
+        colors:    form.colors.split(',').map(c => c.trim()),
+        stock:     Number(form.stock),
+        badge:     form.badge || null,
+        mainImage: uploadedImage?.url || null,
+        images:    uploadedImage ? [uploadedImage.url] : [],
       });
-      // reset form
       setForm({ name:'', category:'Suits', price:'', oldPrice:'', sizes:'S,M,L,XL', colors:'#1A1714', stock:'10', desc:'', badge:'', emoji:'👔' });
+      setUploadedImage(null); setPreview(null);
       onClose();
     } catch (e) {
       setErr(e.response?.data?.message || 'Failed to add product');
@@ -48,7 +82,7 @@ function AddProductModal({ open, onClose, onAdd }) {
       onClick={onClose}
     >
       <div
-        style={{ background:'var(--white)', borderRadius:12, width:'100%', maxWidth:560, maxHeight:'90vh', overflowY:'auto', boxShadow:'var(--shadow2)' }}
+        style={{ background:'var(--white)', borderRadius:12, width:'100%', maxWidth:580, maxHeight:'92vh', overflowY:'auto', boxShadow:'var(--shadow2)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* HEAD */}
@@ -57,8 +91,82 @@ function AddProductModal({ open, onClose, onAdd }) {
           <button className="icon-btn" onClick={onClose}><Icon name="x" /></button>
         </div>
 
-        {/* BODY */}
         <div style={{ padding:'20px 28px 28px' }}>
+
+          {/* IMAGE UPLOAD BOX */}
+          <div style={{ marginBottom:20 }}>
+            <label className="input-label" style={{ marginBottom:8, display:'block' }}>
+              Product Image
+            </label>
+
+            {!preview ? (
+              <label style={{
+                display:'flex', flexDirection:'column', alignItems:'center',
+                justifyContent:'center', border:'2px dashed var(--cream3)',
+                borderRadius:8, padding:'32px 20px', cursor:'pointer',
+                background:'var(--cream2)', transition:'border-color .2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--cream3)'}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display:'none' }}
+                  onChange={handleImageChange}
+                />
+                <div style={{ fontSize:40, marginBottom:10 }}>📷</div>
+                <div style={{ fontWeight:500, fontSize:14, color:'var(--charcoal)' }}>
+                  Click to upload a product photo
+                </div>
+                <div style={{ fontSize:12, color:'var(--grey)', marginTop:6 }}>
+                  JPG, PNG or WebP · Max 5MB
+                </div>
+                {uploading && (
+                  <div style={{ marginTop:12, fontSize:13, color:'var(--accent)', fontWeight:500 }}>
+                    ⏳ Uploading to cloud…
+                  </div>
+                )}
+              </label>
+            ) : (
+              <div style={{ position:'relative' }}>
+                <img
+                  src={preview} alt="Preview"
+                  style={{ width:'100%', maxHeight:220, objectFit:'cover', borderRadius:8, border:'1px solid var(--cream3)', display:'block' }}
+                />
+                {uploading && (
+                  <div style={{
+                    position:'absolute', inset:0, background:'rgba(0,0,0,.45)',
+                    borderRadius:8, display:'flex', alignItems:'center',
+                    justifyContent:'center', color:'#fff', fontSize:14, fontWeight:500,
+                  }}>
+                    ⏳ Uploading…
+                  </div>
+                )}
+                {!uploading && uploadedImage && (
+                  <div style={{
+                    position:'absolute', top:10, left:10, background:'var(--success)',
+                    color:'#fff', fontSize:12, padding:'3px 10px',
+                    borderRadius:99, fontWeight:600,
+                  }}>
+                    ✓ Uploaded
+                  </div>
+                )}
+                <button
+                  onClick={removeImage}
+                  style={{
+                    position:'absolute', bottom:10, right:10, background:'var(--danger)',
+                    color:'#fff', border:'none', borderRadius:6,
+                    padding:'6px 14px', fontSize:12, cursor:'pointer', fontWeight:500,
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* FORM FIELDS */}
           <div className="grid-2" style={{ gap:12 }}>
             <div className="input-group" style={{ marginBottom:12 }}>
               <label className="input-label">Product Name *</label>
@@ -79,7 +187,7 @@ function AddProductModal({ open, onClose, onAdd }) {
               <input className="input-field" type="number" placeholder="Leave blank if no sale" value={form.oldPrice} onChange={set('oldPrice')} />
             </div>
             <div className="input-group" style={{ marginBottom:12 }}>
-              <label className="input-label">Emoji Icon</label>
+              <label className="input-label">Emoji (fallback if no image)</label>
               <input className="input-field" placeholder="👔" value={form.emoji} onChange={set('emoji')} />
             </div>
             <div className="input-group" style={{ marginBottom:12 }}>
@@ -128,16 +236,20 @@ function AddProductModal({ open, onClose, onAdd }) {
 
           <div style={{ display:'flex', gap:10 }}>
             <button className="btn btn-ghost" style={{ flex:1 }} onClick={onClose}>Cancel</button>
-            <button className="btn btn-primary" style={{ flex:1 }} onClick={submit} disabled={loading}>
-              {loading ? 'Adding…' : '+ Add Product'}
+            <button
+              className="btn btn-primary" style={{ flex:1 }}
+              onClick={submit}
+              disabled={loading || uploading}
+            >
+              {uploading ? 'Uploading image…' : loading ? 'Saving…' : '+ Add Product'}
             </button>
           </div>
+
         </div>
       </div>
     </div>
   );
 }
-
 // ── MAIN ADMIN PAGE ───────────────────────────
 export default function AdminPage() {
   const navigate = useNavigate();

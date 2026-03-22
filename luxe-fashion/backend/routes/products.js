@@ -48,6 +48,7 @@ router.get('/:id', async (req, res) => {
 // Admin only — add new product
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
+     console.log('Creating product with data:', JSON.stringify(req.body, null, 2));
     const product = await Product.create(req.body);
     res.status(201).json(product);
   } catch (error) {

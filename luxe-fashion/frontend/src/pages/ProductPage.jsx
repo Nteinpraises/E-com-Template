@@ -70,7 +70,17 @@ export default function ProductPage() {
 
         {/* MAIN GRID */}
         <div className="detail-grid">
-          <div className="detail-img">{product.emoji}</div>
+          <div className="detail-img" style={{ padding:0, overflow:'hidden' }}>
+            {product.mainImage ? (
+                <img
+                src={product.mainImage}
+                alt={product.name}
+                style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'var(--radius)' }}
+                />
+            ) : (
+                <span style={{ fontSize:120 }}>{product.emoji}</span>
+            )}
+        </div>
 
           <div>
             <div style={{ fontSize:11, color:'var(--grey)', letterSpacing:2, textTransform:'uppercase', marginBottom:8 }}>

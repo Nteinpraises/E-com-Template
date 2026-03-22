@@ -22,7 +22,8 @@ const productSchema = new mongoose.Schema({
   colors:   [{ type: String }],
   stock:    { type: Number, required: true, default: 0 },
   badge:    { type: String, enum: ['New', 'Bestseller', 'Sale', null], default: null },
-  images:   [{ type: String }], // image URLs when you add real photos
+  images:    [{ type: String }],
+  mainImage: { type: String, default: null }, // image URLs when you add real photos
   reviews:  [reviewSchema],
   rating: {
     type: Number,
