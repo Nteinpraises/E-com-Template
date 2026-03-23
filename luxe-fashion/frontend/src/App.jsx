@@ -9,6 +9,7 @@ import ShopPage     from './pages/ShopPage';
 import ProductPage  from './pages/ProductPage';
 import CheckoutPage from './pages/CheckoutPage';
 import AdminPage    from './pages/AdminPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/checkout"    element={<CheckoutPage />}/>
           <Route path="/admin"       element={<AdminPage />}   />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         </Routes>
       </main>
       <Footer />

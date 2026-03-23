@@ -62,50 +62,70 @@ router.post('/login', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
+    
+    console.log('Forgot password request for:', req.body.email);
+    console.log('User found:', user ? 'YES' : 'NO');
+
     if (!user) {
-      // Don't reveal if email exists — just say sent
       return res.json({ message: 'If that email exists, a reset link has been sent.' });
     }
 
-    // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken  = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000; // 30 minutes
+    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000;
     await user.save({ validateBeforeSave: false });
 
-    // Build reset URL
     const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+    console.log('Reset URL generated:', resetUrl);
+    console.log('Attempting to send email to:', user.email);
+    console.log('Using EMAIL_USER:', process.env.EMAIL_USER);
+    console.log('EMAIL_PASS set:', process.env.EMAIL_PASS ? 'YES' : 'NO');
 
-    // Send email
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
+      port: Number(process.env.EMAIL_PORT),
+      secure: false,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
     });
 
+    // Verify connection first
+    await transporter.verify();
+    console.log('SMTP connection verified ✓');
+
     await transporter.sendMail({
       from:    `"LUXE Fashion" <${process.env.EMAIL_USER}>`,
       to:      user.email,
       subject: 'Password Reset Request — LUXE',
       html: `
-        <h2>Reset Your Password</h2>
-        <p>You requested a password reset. Click the link below:</p>
-        <a href="${resetUrl}" style="background:#2C2925;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;">
-          Reset Password
-        </a>
-        <p>This link expires in 30 minutes.</p>
-        <p>If you didn't request this, ignore this email.</p>
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:32px">
+          <h2 style="color:#2C2925">Reset Your Password</h2>
+          <p>You requested a password reset for your LUXE account.</p>
+          <p>Click the button below to set a new password:</p>
+          <a href="${resetUrl}"
+             style="display:inline-block;background:#2C2925;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;margin:16px 0">
+            Reset My Password
+          </a>
+          <p style="color:#888;font-size:13px">This link expires in 30 minutes.</p>
+          <p style="color:#888;font-size:13px">If you didn't request this, ignore this email.</p>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+          <p style="color:#bbb;font-size:12px">LUXE Men's Fashion</p>
+        </div>
       `,
     });
 
+    console.log('Email sent successfully ✓');
     res.json({ message: 'If that email exists, a reset link has been sent.' });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Forgot password error:', error.message);
+    console.error('Full error:', error);
+    res.status(500).json({ message: 'Email could not be sent. Please try again.' });
   }
 });
+
 
 // ── PUT /api/auth/reset-password/:token ──────
 router.put('/reset-password/:token', async (req, res) => {

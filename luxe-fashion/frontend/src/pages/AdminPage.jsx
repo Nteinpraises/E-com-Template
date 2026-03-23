@@ -250,6 +250,253 @@ function AddProductModal({ open, onClose, onAdd }) {
     </div>
   );
 }
+
+// ── EDIT PRODUCT MODAL ────────────────────────
+function EditProductModal({ open, onClose, product, onSave }) {
+  const [loading,       setLoading]       = useState(false);
+  const [uploading,     setUploading]     = useState(false);
+  const [err,           setErr]           = useState('');
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [preview,       setPreview]       = useState(null);
+  const cats = ['Suits','Shirts','T-Shirts','Trousers','Jeans','Loafers'];
+
+  const [form, setForm] = useState({
+    name:     '',
+    category: 'Suits',
+    price:    '',
+    oldPrice: '',
+    emoji:    '👔',
+    stock:    '',
+    sizes:    '',
+    colors:   '',
+    badge:    '',
+    desc:     '',
+  });
+
+  // Pre-fill form when product changes
+  useEffect(() => {
+    if (product) {
+      setForm({
+        name:     product.name     || '',
+        category: product.category || 'Suits',
+        price:    product.price    || '',
+        oldPrice: product.oldPrice || '',
+        emoji:    product.emoji    || '👔',
+        stock:    product.stock    || '',
+        sizes:    Array.isArray(product.sizes)  ? product.sizes.join(',')  : '',
+        colors:   Array.isArray(product.colors) ? product.colors.join(',') : '',
+        badge:    product.badge    || '',
+        desc:     product.desc     || '',
+      });
+      setPreview(product.mainImage || null);
+      setUploadedImage(product.mainImage ? { url: product.mainImage } : null);
+      setErr('');
+    }
+  }, [product]);
+
+  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const { data } = await axios.post(
+        `${API}/upload`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      setUploadedImage(data);
+    } catch (e) {
+      setErr('Image upload failed. Please try again.');
+      setPreview(product?.mainImage || null);
+    } finally { setUploading(false); }
+  };
+
+  const removeImage = () => {
+    setUploadedImage(null);
+    setPreview(null);
+  };
+
+  const submit = async () => {
+    if (!form.name || !form.price || !form.desc) {
+      setErr('Name, price and description are required'); return;
+    }
+    setLoading(true); setErr('');
+    try {
+      await onSave(product._id, {
+        ...form,
+        price:     Number(form.price),
+        oldPrice:  form.oldPrice ? Number(form.oldPrice) : null,
+        sizes:     form.sizes.split(',').map(s => s.trim()),
+        colors:    form.colors.split(',').map(c => c.trim()),
+        stock:     Number(form.stock),
+        badge:     form.badge || null,
+        mainImage: uploadedImage?.url || null,
+        images:    uploadedImage ? [uploadedImage.url] : [],
+      });
+      onClose();
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Failed to save changes');
+    } finally { setLoading(false); }
+  };
+
+  if (!open || !product) return null;
+
+  return (
+    <div
+      style={{ position:'fixed', inset:0, background:'rgba(26,23,20,.6)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background:'var(--white)', borderRadius:12, width:'100%', maxWidth:580, maxHeight:'92vh', overflowY:'auto', boxShadow:'var(--shadow2)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* HEAD */}
+        <div style={{ padding:'24px 28px 0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div>
+            <div style={{ fontFamily:'var(--ff-serif)', fontSize:24 }}>Edit Product</div>
+            <div style={{ fontSize:13, color:'var(--grey)', marginTop:2 }}>{product.name}</div>
+          </div>
+          <button className="icon-btn" onClick={onClose}><Icon name="x" /></button>
+        </div>
+
+        <div style={{ padding:'20px 28px 28px' }}>
+
+          {/* IMAGE SECTION */}
+          <div style={{ marginBottom:20 }}>
+            <label className="input-label" style={{ marginBottom:8, display:'block' }}>
+              Product Image
+            </label>
+            {!preview ? (
+              <label style={{
+                display:'flex', flexDirection:'column', alignItems:'center',
+                justifyContent:'center', border:'2px dashed var(--cream3)',
+                borderRadius:8, padding:'28px 20px', cursor:'pointer',
+                background:'var(--cream2)', transition:'border-color .2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor='var(--accent)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor='var(--cream3)'}
+              >
+                <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleImageChange} />
+                <div style={{ fontSize:36, marginBottom:8 }}>📷</div>
+                <div style={{ fontWeight:500, fontSize:14 }}>Click to upload new image</div>
+                <div style={{ fontSize:12, color:'var(--grey)', marginTop:4 }}>JPG, PNG or WebP</div>
+              </label>
+            ) : (
+              <div style={{ position:'relative' }}>
+                <img
+                  src={preview}
+                  alt="Preview"
+                  style={{ width:'100%', maxHeight:200, objectFit:'cover', borderRadius:8, border:'1px solid var(--cream3)', display:'block' }}
+                />
+                {uploading && (
+                  <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.45)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:14, fontWeight:500 }}>
+                    ⏳ Uploading…
+                  </div>
+                )}
+                {!uploading && uploadedImage && (
+                  <div style={{ position:'absolute', top:10, left:10, background:'var(--success)', color:'#fff', fontSize:12, padding:'3px 10px', borderRadius:99, fontWeight:600 }}>
+                    ✓ Ready
+                  </div>
+                )}
+                <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                  <label style={{ flex:1 }}>
+                    <input type="file" accept="image/*" style={{ display:'none' }} onChange={handleImageChange} />
+                    <div className="btn btn-ghost btn-sm btn-full" style={{ textAlign:'center', cursor:'pointer' }}>
+                      Replace Image
+                    </div>
+                  </label>
+                  <button className="btn btn-danger btn-sm" onClick={removeImage}>Remove</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* FORM FIELDS */}
+          <div className="grid-2" style={{ gap:12 }}>
+            <div className="input-group" style={{ marginBottom:12 }}>
+              <label className="input-label">Product Name *</label>
+              <input className="input-field" value={form.name} onChange={set('name')} />
+            </div>
+            <div className="input-group" style={{ marginBottom:12 }}>
+              <label className="input-label">Category</label>
+              <select className="input-field" value={form.category} onChange={set('category')}>
+                {cats.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="input-group" style={{ marginBottom:12 }}>
+              <label className="input-label">Price ($) *</label>
+              <input className="input-field" type="number" value={form.price} onChange={set('price')} />
+            </div>
+            <div className="input-group" style={{ marginBottom:12 }}>
+              <label className="input-label">Old / Original Price ($)</label>
+              <input className="input-field" type="number" placeholder="Leave blank if no sale" value={form.oldPrice} onChange={set('oldPrice')} />
+            </div>
+            <div className="input-group" style={{ marginBottom:12 }}>
+              <label className="input-label">Emoji (fallback icon)</label>
+              <input className="input-field" value={form.emoji} onChange={set('emoji')} />
+            </div>
+            <div className="input-group" style={{ marginBottom:12 }}>
+              <label className="input-label">Stock Quantity</label>
+              <input className="input-field" type="number" value={form.stock} onChange={set('stock')} />
+            </div>
+          </div>
+
+          <div className="input-group" style={{ marginBottom:12 }}>
+            <label className="input-label">Sizes (comma-separated)</label>
+            <input className="input-field" placeholder="S,M,L,XL or 28,30,32,34" value={form.sizes} onChange={set('sizes')} />
+          </div>
+
+          <div className="input-group" style={{ marginBottom:12 }}>
+            <label className="input-label">Colours (hex codes, comma-separated)</label>
+            <input className="input-field" value={form.colors} onChange={set('colors')} />
+            <div style={{ display:'flex', gap:6, marginTop:6 }}>
+              {form.colors.split(',').filter(c => c.trim()).map((c,i) => (
+                <div key={i} style={{ width:20, height:20, borderRadius:'50%', background:c.trim(), border:'1px solid var(--cream3)' }} />
+              ))}
+            </div>
+          </div>
+
+          <div className="input-group" style={{ marginBottom:12 }}>
+            <label className="input-label">Badge</label>
+            <select className="input-field" value={form.badge} onChange={set('badge')}>
+              <option value="">None</option>
+              <option>New</option>
+              <option>Bestseller</option>
+              <option>Sale</option>
+            </select>
+          </div>
+
+          <div className="input-group" style={{ marginBottom:16 }}>
+            <label className="input-label">Description *</label>
+            <textarea className="input-field" rows={3} value={form.desc} onChange={set('desc')} />
+          </div>
+
+          {err && (
+            <div style={{ color:'var(--danger)', fontSize:13, marginBottom:12, background:'#FDEDEC', padding:'8px 12px', borderRadius:4 }}>
+              {err}
+            </div>
+          )}
+
+          <div style={{ display:'flex', gap:10 }}>
+            <button className="btn btn-ghost" style={{ flex:1 }} onClick={onClose}>Cancel</button>
+            <button
+              className="btn btn-primary" style={{ flex:1 }}
+              onClick={submit}
+              disabled={loading || uploading}
+            >
+              {uploading ? 'Uploading image…' : loading ? 'Saving…' : '✓ Save Changes'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 // ── MAIN ADMIN PAGE ───────────────────────────
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -257,7 +504,9 @@ export default function AdminPage() {
   const [tab,      setTab]      = useState('dashboard');
   const [products, setProducts] = useState([]);
   const [orders,   setOrders]   = useState([]);
-  const [addOpen,  setAddOpen]  = useState(false);
+  const [addOpen,    setAddOpen]    = useState(false);
+  const [editOpen,   setEditOpen]   = useState(false);
+  const [editProduct, setEditProduct] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -268,6 +517,10 @@ export default function AdminPage() {
   const handleAddProduct = async (productData) => {
     const { data } = await axios.post(`${API}/products`, productData);
     setProducts(ps => [...ps, data]);
+  };
+  const handleEditProduct = async (id, productData) => {
+    const { data } = await axios.put(`${API}/products/${id}`, productData);
+    setProducts(ps => ps.map(p => p._id === id ? data : p));
   };
 
   const removeProduct = async (id) => {
@@ -302,6 +555,15 @@ export default function AdminPage() {
     <div className="admin-layout">
 
       <AddProductModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAddProduct} />
+
+        <AddProductModal open={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAddProduct} />
+
+      <EditProductModal
+        open={editOpen}
+        onClose={() => { setEditOpen(false); setEditProduct(null); }}
+        product={editProduct}
+        onSave={handleEditProduct}
+      />
 
       {/* SIDEBAR */}
       <div className="admin-sidebar">
@@ -402,9 +664,17 @@ export default function AdminPage() {
                     </td>
                     <td><Stars rating={p.rating} size={12} /></td>
                     <td>
-                      <button className="btn btn-danger btn-sm" onClick={() => removeProduct(p._id)}>
+                     <div style={{ display:'flex', gap:8 }}>
+                        <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => { setEditProduct(p); setEditOpen(true); }}
+                        >
+                        <Icon name="edit" size={13} /> Edit
+                        </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => removeProduct(p._id)}>
                         Remove
-                      </button>
+                        </button>
+                     </div>
                     </td>
                   </tr>
                 ))}</tbody>
