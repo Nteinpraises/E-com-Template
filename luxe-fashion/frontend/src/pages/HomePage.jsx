@@ -9,6 +9,8 @@ const API = import.meta.env.VITE_API_URL;
 function ProductCard({ product }) {
   const navigate = useNavigate();
   const { addToCart, addToWishlist, removeFromWishlist, isWishlisted, user, setAuthOpen } = useApp();
+
+  if (!product) return null;
   const wishlisted = isWishlisted(product._id);
 
   const handleWishlist = (e) => {
@@ -50,8 +52,8 @@ function ProductCard({ product }) {
             display:'flex', alignItems:'center', justifyContent:'center',
             fontSize:16, transition:'all .2s',
             boxShadow:'0 2px 8px rgba(0,0,0,.15)',
+            color: wishlisted ? '#fff' : '#888',
           }}
-          title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
         >
           {wishlisted ? '♥' : '♡'}
         </button>
@@ -76,7 +78,9 @@ function ProductCard({ product }) {
         <button className="btn btn-primary btn-sm" style={{ flex:1 }}
                 onClick={() => navigate(`/product/${product._id}`)}>View</button>
         <button className="btn btn-outline btn-sm"
-                onClick={() => addToCart(product, product.sizes[0], product.colors[0])}>+ Cart</button>
+                onClick={() => addToCart(product, product.sizes?.[0], product.colors?.[0])}>
+          + Cart
+        </button>
       </div>
     </div>
   );

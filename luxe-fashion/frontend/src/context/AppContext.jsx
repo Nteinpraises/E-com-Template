@@ -81,11 +81,10 @@ export function AppProvider({ children }) {
   // ── WISHLIST FUNCTIONS ────────────────────
   const [wishlist, setWishlist] = useState([]);
 
-  // Load wishlist when user logs in
   useEffect(() => {
     if (user?.token) {
       axios.get(`${API}/users/wishlist`)
-        .then(r => setWishlist(r.data))
+        .then(r => setWishlist(r.data || []))
         .catch(() => setWishlist([]));
     } else {
       setWishlist([]);
@@ -107,20 +106,22 @@ export function AppProvider({ children }) {
     try {
       await axios.delete(`${API}/users/wishlist/${productId}`);
       setWishlist(w => w.filter(p => {
-        const id = typeof p === 'string' ? p : p._id;
-        return id !== productId;
+        if (!p) return false;
+        const id = p._id || p;
+        return String(id) !== String(productId);
       }));
       toast('Removed from wishlist');
     } catch (e) {
       toast('Could not remove item', 'error');
     }
-  }; 
+  };
 
   const isWishlisted = (productId) => {
+    if (!wishlist || !Array.isArray(wishlist) || !productId) return false;
     return wishlist.some(p => {
       if (!p) return false;
-      const id = typeof p === 'string' ? p : p._id;
-      return id === productId;
+      const id = p._id || p;
+      return String(id) === String(productId);
     });
   };
 
