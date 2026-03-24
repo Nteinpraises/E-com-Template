@@ -8,39 +8,53 @@ const API = import.meta.env.VITE_API_URL;
 
 function ProductCard({ product }) {
   const navigate = useNavigate();
-  const { addToCart } = useApp();
+  const { addToCart, addToWishlist, removeFromWishlist, isWishlisted, user, setAuthOpen } = useApp();
+  const wishlisted = isWishlisted(product._id);
+
+  const handleWishlist = (e) => {
+    e.stopPropagation();
+    if (!user) { setAuthOpen(true); return; }
+    if (wishlisted) {
+      removeFromWishlist(product._id);
+    } else {
+      addToWishlist(product);
+    }
+  };
 
   return (
     <div className="product-card" onClick={() => navigate(`/product/${product._id}`)}>
 
-      {/* IMAGE AREA */}
+      {/* IMAGE */}
       <div style={{
-        width: '100%',
-        aspectRatio: '3/4',
-        background: 'linear-gradient(135deg, var(--cream2), var(--cream3))',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
+        width:'100%', aspectRatio:'3/4',
+        background:'linear-gradient(135deg,var(--cream2),var(--cream3))',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        position:'relative', overflow:'hidden',
       }}>
         {product.mainImage ? (
-          <img
-            src={product.mainImage}
-            alt={product.name}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-            }}
-          />
+          <img src={product.mainImage} alt={product.name}
+               style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
         ) : (
-          <span style={{ fontSize: 72 }}>{product.emoji}</span>
+          <span style={{ fontSize:72 }}>{product.emoji}</span>
         )}
-        {product.badge && (
-          <span className="product-badge">{product.badge}</span>
-        )}
+        {product.badge && <span className="product-badge">{product.badge}</span>}
+
+        {/* HEART BUTTON */}
+        <button
+          onClick={handleWishlist}
+          style={{
+            position:'absolute', top:10, right:10,
+            width:34, height:34, borderRadius:'50%',
+            background: wishlisted ? '#e11d48' : 'rgba(255,255,255,.85)',
+            border:'none', cursor:'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:16, transition:'all .2s',
+            boxShadow:'0 2px 8px rgba(0,0,0,.15)',
+          }}
+          title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+        >
+          {wishlisted ? '♥' : '♡'}
+        </button>
       </div>
 
       {/* INFO */}

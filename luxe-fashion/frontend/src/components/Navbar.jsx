@@ -5,7 +5,7 @@ import { Icon } from './Icons';
 export default function Navbar() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { user, logout, cartCount, setCartOpen, setAuthOpen, search, setSearch, setFilterCat } = useApp();
+  const { user, logout, cartCount, setCartOpen, setAuthOpen, search, setSearch, setFilterCat, wishlist } = useApp();
 
   const isActive = (path) => location.pathname === path;
 
@@ -64,6 +64,20 @@ export default function Navbar() {
           ) : (
             <button className="icon-btn" onClick={() => setAuthOpen(true)} title="Login">
               <Icon name="user" size={17} />
+            </button>
+          )}
+          {/* WISHLIST ICON — only show when logged in */}
+          {user && (
+            <button
+              className="icon-btn"
+              onClick={() => navigate('/wishlist')}
+              title="My Wishlist"
+              style={{ position:'relative' }}
+            >
+              <span style={{ fontSize:17 }}>♡</span>
+              {wishlist.length > 0 && (
+                <span className="badge">{wishlist.length}</span>
+              )}
             </button>
           )}
 

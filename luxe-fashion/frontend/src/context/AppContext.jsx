@@ -78,6 +78,52 @@ export function AppProvider({ children }) {
     await axios.post(`${API}/auth/forgot-password`, { email });
   };
 
+  // ── WISHLIST FUNCTIONS ────────────────────
+  const [wishlist, setWishlist] = useState([]);
+
+  // Load wishlist when user logs in
+  useEffect(() => {
+    if (user?.token) {
+      axios.get(`${API}/users/wishlist`)
+        .then(r => setWishlist(r.data))
+        .catch(() => setWishlist([]));
+    } else {
+      setWishlist([]);
+    }
+  }, [user]);
+
+  const addToWishlist = async (product) => {
+    if (!user) { toast('Please sign in to save items', 'error'); return; }
+    try {
+      await axios.post(`${API}/users/wishlist/${product._id}`);
+      setWishlist(w => [...w, product]);
+      toast('Saved to wishlist ♥', 'success');
+    } catch (e) {
+      toast(e.response?.data?.message || 'Could not save item', 'error');
+    }
+  };
+
+  const removeFromWishlist = async (productId) => {
+    try {
+      await axios.delete(`${API}/users/wishlist/${productId}`);
+      setWishlist(w => w.filter(p => {
+        const id = typeof p === 'string' ? p : p._id;
+        return id !== productId;
+      }));
+      toast('Removed from wishlist');
+    } catch (e) {
+      toast('Could not remove item', 'error');
+    }
+  }; 
+
+  const isWishlisted = (productId) => {
+    return wishlist.some(p => {
+      if (!p) return false;
+      const id = typeof p === 'string' ? p : p._id;
+      return id === productId;
+    });
+  };
+
   // ── CART FUNCTIONS ────────────────────────────
   const addToCart = useCallback((product, size, color, qty = 1) => {
     if (!size) { toast('Please select a size', 'error'); return; }
@@ -93,7 +139,7 @@ export function AppProvider({ children }) {
     setCartOpen(true);
   }, [toast]);
 
-  const removeFromCart = useCallback((key) => {
+ const removeFromCart = useCallback((key) => {
     setCart(c => c.filter(i => i.key !== key));
   }, []);
 
@@ -113,6 +159,8 @@ export function AppProvider({ children }) {
     // cart
     cart, addToCart, removeFromCart, updateQty, clearCart,
     cartTotal, cartCount,
+    // wishlist
+    wishlist, addToWishlist, removeFromWishlist, isWishlisted,
     // ui
     cartOpen, setCartOpen,
     authOpen, setAuthOpen,

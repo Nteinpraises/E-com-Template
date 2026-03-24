@@ -10,6 +10,7 @@ import ProductPage  from './pages/ProductPage';
 import CheckoutPage from './pages/CheckoutPage';
 import AdminPage    from './pages/AdminPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import WishlistPage from './pages/WishlistPage';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/checkout"    element={<CheckoutPage />}/>
           <Route path="/admin"       element={<AdminPage />}   />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
         </Routes>
       </main>
       <Footer />

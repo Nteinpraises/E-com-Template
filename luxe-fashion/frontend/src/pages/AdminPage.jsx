@@ -504,6 +504,7 @@ export default function AdminPage() {
   const [tab,      setTab]      = useState('dashboard');
   const [products, setProducts] = useState([]);
   const [orders,   setOrders]   = useState([]);
+  const [users,    setUsers]    = useState([]);
   const [addOpen,    setAddOpen]    = useState(false);
   const [editOpen,   setEditOpen]   = useState(false);
   const [editProduct, setEditProduct] = useState(null);
@@ -512,6 +513,7 @@ export default function AdminPage() {
     if (!user || user.role !== 'admin') return;
     axios.get(`${API}/products`).then(r => setProducts(r.data)).catch(console.error);
     axios.get(`${API}/orders`).then(r => setOrders(r.data)).catch(console.error);
+    axios.get(`${API}/users`).then(r => setUsers(r.data)).catch(console.error);
   }, [user]);
 
   const handleAddProduct = async (productData) => {
@@ -533,6 +535,11 @@ export default function AdminPage() {
     await axios.put(`${API}/orders/${id}/status`, { orderStatus });
     setOrders(os => os.map(o => o._id === id ? { ...o, orderStatus } : o));
   };
+  const deleteUser = async (id) => {
+    if (!window.confirm('Delete this user account? This cannot be undone.')) return;
+    await axios.delete(`${API}/users/${id}`);
+    setUsers(us => us.filter(u => u._id !== id));
+  };
 
   if (!user || user.role !== 'admin') return (
     <div style={{ padding:'100px 20px', textAlign:'center' }}>
@@ -544,12 +551,13 @@ export default function AdminPage() {
 
   const revenue = orders.filter(o => o.orderStatus !== 'cancelled').reduce((s,o) => s + o.totalPrice, 0);
   const navItems = [
-    { key:'dashboard', icon:'dash',     label:'Dashboard' },
-    { key:'products',  icon:'box',      label:'Products'  },
-    { key:'orders',    icon:'orders',   label:'Orders'    },
-    { key:'shipping',  icon:'truck',    label:'Shipping'  },
-    { key:'settings',  icon:'settings', label:'Settings'  },
-  ];
+  { key:'dashboard', icon:'dash',     label:'Dashboard' },
+  { key:'products',  icon:'box',      label:'Products'  },
+  { key:'orders',    icon:'orders',   label:'Orders'    },
+  { key:'shipping',  icon:'truck',    label:'Shipping'  },
+  { key:'users',     icon:'user',     label:'Users'     },
+  { key:'settings',  icon:'settings', label:'Settings'  },
+];
 
   return (
     <div className="admin-layout">
@@ -806,6 +814,101 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* USERS */}
+          {tab === 'users' && (
+            <>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+                <div>
+                  <div style={{ fontWeight:600, fontSize:17 }}>Registered Users</div>
+                  <div style={{ fontSize:13, color:'var(--grey)' }}>{users.length} total accounts</div>
+                </div>
+              </div>
+
+              {/* STATS */}
+              <div className="grid-4" style={{ marginBottom:24 }}>
+                {[
+                  { label:'Total Users',  value: users.length,                              color:'var(--charcoal)' },
+                  { label:'Admins',       value: users.filter(u=>u.role==='admin').length,   color:'var(--accent)'   },
+                  { label:'Customers',    value: users.filter(u=>u.role==='user').length,    color:'var(--charcoal)' },
+                  { label:'This Month',   value: users.filter(u => {
+                    const d = new Date(u.createdAt);
+                    const now = new Date();
+                    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+                  }).length, color:'var(--success)' },
+                ].map(s => (
+                  <div key={s.label} className="stat-card">
+                    <div className="stat-num" style={{ color:s.color }}>{s.value}</div>
+                    <div className="stat-label">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {users.length === 0 ? (
+                <div style={{ textAlign:'center', padding:'60px', color:'var(--grey)', background:'var(--white)', borderRadius:8, border:'1px solid var(--cream3)' }}>
+                  No users registered yet
+                </div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Wishlist</th>
+                      <th>Joined</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map(u => (
+                      <tr key={u._id}>
+                        <td>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <div style={{
+                              width:34, height:34, borderRadius:'50%',
+                              background: u.role==='admin' ? 'var(--accent)' : 'var(--cream3)',
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              fontSize:13, fontWeight:600,
+                              color: u.role==='admin' ? '#fff' : 'var(--grey2)',
+                              flexShrink:0,
+                            }}>
+                              {u.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span style={{ fontWeight:500 }}>{u.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ color:'var(--grey)', fontSize:13 }}>{u.email}</td>
+                        <td>
+                          <span className={`status-badge ${u.role==='admin' ? 'delivered' : 'processing'}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ color:'var(--grey)' }}>
+                            {u.wishlist?.length || 0} item{u.wishlist?.length !== 1 ? 's' : ''}
+                          </span>
+                        </td>
+                        <td style={{ color:'var(--grey)', fontSize:13 }}>
+                          {new Date(u.createdAt).toLocaleDateString()}
+                        </td>
+                        <td>
+                          {u.role !== 'admin' && (
+                            <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u._id)}>
+                              Delete
+                            </button>
+                          )}
+                          {u.role === 'admin' && (
+                            <span style={{ fontSize:12, color:'var(--grey)' }}>Protected</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
           )}
 
         </div>
