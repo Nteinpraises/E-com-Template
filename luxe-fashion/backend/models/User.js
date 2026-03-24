@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken:   String,
   resetPasswordExpire:  Date,
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
 }, { timestamps: true });
 
 // ── Hash password before saving ──────────────

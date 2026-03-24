@@ -9,16 +9,15 @@ const API = import.meta.env.VITE_API_URL;
 function ProductCard({ product }) {
   const navigate = useNavigate();
   const { addToCart, addToWishlist, removeFromWishlist, isWishlisted, user, setAuthOpen } = useApp();
+
+  if (!product || !product._id) return null;
+
   const wishlisted = isWishlisted(product._id);
 
   const handleWishlist = (e) => {
     e.stopPropagation();
     if (!user) { setAuthOpen(true); return; }
-    if (wishlisted) {
-      removeFromWishlist(product._id);
-    } else {
-      addToWishlist(product);
-    }
+    wishlisted ? removeFromWishlist(product._id) : addToWishlist(product);
   };
 
   return (
@@ -39,7 +38,7 @@ function ProductCard({ product }) {
         )}
         {product.badge && <span className="product-badge">{product.badge}</span>}
 
-        {/* HEART BUTTON */}
+        {/* HEART */}
         <button
           onClick={handleWishlist}
           style={{
@@ -50,8 +49,8 @@ function ProductCard({ product }) {
             display:'flex', alignItems:'center', justifyContent:'center',
             fontSize:16, transition:'all .2s',
             boxShadow:'0 2px 8px rgba(0,0,0,.15)',
+            color: wishlisted ? '#fff' : '#888',
           }}
-          title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
         >
           {wishlisted ? '♥' : '♡'}
         </button>
@@ -63,11 +62,13 @@ function ProductCard({ product }) {
         <div className="product-name">{product.name}</div>
         <div style={{ display:'flex', alignItems:'center' }}>
           <span className="product-price">${product.price}</span>
-          {product.oldPrice && <span className="product-old-price">${product.oldPrice}</span>}
+          {product.oldPrice && (
+            <span className="product-old-price">${product.oldPrice}</span>
+          )}
         </div>
         <div className="product-rating">
-          <Stars rating={product.rating} />
-          <span>({product.numReviews})</span>
+          <Stars rating={product.rating || 0} />
+          <span>({product.numReviews || 0})</span>
         </div>
       </div>
 
@@ -76,7 +77,13 @@ function ProductCard({ product }) {
         <button className="btn btn-primary btn-sm" style={{ flex:1 }}
                 onClick={() => navigate(`/product/${product._id}`)}>View</button>
         <button className="btn btn-outline btn-sm"
-                onClick={() => addToCart(product, product.sizes[0], product.colors[0])}>+ Cart</button>
+                onClick={() => {
+                  const size  = product.sizes  && product.sizes.length  > 0 ? product.sizes[0]  : '';
+                  const color = product.colors && product.colors.length > 0 ? product.colors[0] : '';
+                  addToCart(product, size, color);
+                }}>
+          + Cart
+        </button>
       </div>
     </div>
   );
@@ -96,8 +103,9 @@ export default function ShopPage() {
     if (filterCat !== 'All') params.category = filterCat;
     if (search)              params.search   = search;
     if (sort !== 'default')  params.sort     = sort;
+
     axios.get(`${API}/products`, { params })
-      .then(r => setProducts(r.data))
+      .then(r => setProducts(r.data || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [filterCat, search, sort]);
@@ -107,23 +115,39 @@ export default function ShopPage() {
       <div className="page-header">
         <div className="max-w">
           <div className="breadcrumb">
-            <span>Home</span><span style={{ color:'var(--stone)' }}>›</span><span>Shop</span>
+            <span>Home</span>
+            <span style={{ color:'var(--stone)' }}>›</span>
+            <span>Shop</span>
           </div>
           <div style={{ fontFamily:'var(--ff-serif)', fontSize:32 }}>Men's Collection</div>
-          <div style={{ fontSize:13, color:'var(--grey)', marginTop:4 }}>{products.length} products</div>
+          <div style={{ fontSize:13, color:'var(--grey)', marginTop:4 }}>
+            {products.length} products
+          </div>
         </div>
       </div>
 
       <div className="max-w" style={{ paddingBottom:60 }}>
+
+        {/* FILTERS */}
         <div className="filter-bar">
           {cats.map(c => (
-            <span key={c} className={`filter-chip ${filterCat === c ? 'active' : ''}`}
-                  onClick={() => setFilterCat(c)}>{c}</span>
+            <span key={c}
+                  className={`filter-chip ${filterCat === c ? 'active' : ''}`}
+                  onClick={() => setFilterCat(c)}>
+              {c}
+            </span>
           ))}
           <div style={{ marginLeft:'auto' }}>
             <select
-              style={{ padding:'7px 32px 7px 12px', border:'1.5px solid var(--cream3)', borderRadius:'var(--radius)', background:'var(--white)', fontSize:13, color:'var(--grey2)', appearance:'none', outline:'none', cursor:'pointer' }}
-              value={sort} onChange={e => setSort(e.target.value)}>
+              style={{
+                padding:'7px 32px 7px 12px', border:'1.5px solid var(--cream3)',
+                borderRadius:'var(--radius)', background:'var(--white)',
+                fontSize:13, color:'var(--grey2)', appearance:'none',
+                outline:'none', cursor:'pointer',
+              }}
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+            >
               <option value="default">Sort: Featured</option>
               <option value="price-asc">Price: Low → High</option>
               <option value="price-desc">Price: High → Low</option>
@@ -132,6 +156,7 @@ export default function ShopPage() {
           </div>
         </div>
 
+        {/* PRODUCTS */}
         {loading ? (
           <div style={{ textAlign:'center', padding:'80px 0', color:'var(--grey)' }}>
             Loading products…
@@ -144,7 +169,7 @@ export default function ShopPage() {
           </div>
         ) : (
           <div className="grid-4">
-            {products.map(p => <ProductCard key={p._id} product={p} />)}
+            {products.map(p => p && p._id ? <ProductCard key={p._id} product={p} /> : null)}
           </div>
         )}
       </div>
